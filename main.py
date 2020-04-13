@@ -1,7 +1,5 @@
 import argparse
-import glob
 # import numpy as np
-import os
 import time
 
 from scipy.io import loadmat
@@ -28,10 +26,8 @@ if __name__ == "__main__":
     print(args.filter)
     print(args.output)
 
-
-
     frames = []
-    for filename in glob.glob(os.path.join(args.data, args.filter))[0:5]:
+    for filename in glob.glob(os.path.join(args.data, args.filter))[0:5]: # hope here all files are sorted
         print(filename)
 
         start_time = time.clock()
@@ -45,7 +41,15 @@ if __name__ == "__main__":
         print("time creating pcd:", time.clock() - start_time)
     frames = np.array(frames)
 
-    animateFrames(frames, save_output= bool(args.output), directory_output= args.output)
+    animateFramesNative(frames, directory_output= args.output)
+
+    if args.output:
+        if args.type == "gif":
+            make_gif(directory = args.output)
+        elif args.type == "avi":
+            make_video(directory= args.output)
+        else:
+            print("sorry, can't find this type of output, use gif or avi")
 
 
 
