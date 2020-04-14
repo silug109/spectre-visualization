@@ -9,7 +9,7 @@ from data_util import *
 
 # 3D visualization
 
-def pointcloud_coords_generation(frame, range_max = 67, azimuth_range_max = 57, elevation_max = 16, por = 0.5):
+def pointcloud_coords_generation(frame, range_max = 67, azimuth_range_max = 57, elevation_max = 16, threshold = 0.5):
     '''
     function to transform tensor represantation(X_shape, Y_shape, Z_shape) to coordinate representation (N_points, 3)
     :param frame: ndarray

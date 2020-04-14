@@ -22,9 +22,9 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     # print(vars(args)["data"])
-    print(args.data)
-    print(args.filter)
-    print(args.output)
+    print("директория, откуда берем файлы mat: ", args.data)
+    print("фильтр, которым обрабатываем список файлов из директории: ", args.filter)
+    print("директория, куда сохраняем выходной файл и промежуточные скрины: ", args.output)
 
     frames = []
     for filename in glob.glob(os.path.join(args.data, args.filter))[0:5]: # hope here all files are sorted
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         print("time opening:", time.clock() - start_time)
 
         start_time = time.clock()
-        __ = indexing(frame)
+        __ = pointcloud_coords_generation(frame)
         print("time creating pcd:", time.clock() - start_time)
     frames = np.array(frames)
 
@@ -50,16 +50,3 @@ if __name__ == "__main__":
             make_video(directory= args.output)
         else:
             print("sorry, can't find this type of output, use gif or avi")
-
-
-
-
-
-
-
-
-
-
-
-
-    # print(globals())
