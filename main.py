@@ -16,8 +16,18 @@ parser.add_argument('-mode', default= "watch", type = str, help = " (watch)/(gen
 parser.add_argument("-num", default = "all", type = str, help = "how many frames visualise, or 'all'(by default) ")
 parser.add_argument('-output', default=None, type=str,
                     help='filename how to save gif of movie')
-parser.add_argument('-loop_mode', default = None, type = str, help = 'watch endlessly or one time')
+parser.add_argument('--screen_size', default = [1280,720], help = "here you can define size of scren")
+#todo update folder output if there are other files.
+
+parser.add_argument('-loop_mode', default = False, type = str, help = 'watch endlessly or one time')
+#todo loop mode
+
 parser.add_argument('-key', default= "TwoD_spectr_UP2", type = str, help = "key by which we need to tackle from mat files, by default  TwoD_spectr_UP2 ")
+parser.add_argument('-is_manual', default = False, type = bool, help = 'if is_manual == True visualization will be run '
+                                                                       'with advanced functionality. press X for step-by-step '
+                                                                       'frame changing. A - load viewpoint, B - save viewpoint(viewpoint.json in root),'
+                                                                       'Z - change to random frame. A lot of functionality can be added')
+parser.add_argument('-is_viewpoint', default = False, type = bool, help = 'load viewpoint or not')
 
 parser.add_argument("-type", default= "gif", type =str, help = "choose gif/avi")
 parser.add_argument("-threshold", default = 0.5, type = float, help = "choose threshold for visualization, default 0.5")
@@ -33,6 +43,8 @@ if __name__ == "__main__":
     print("порог визаулизации ", args.threshold )
     print(f"визулизирую {args.num} кадров/ы")
     print(f"из мат файлов достаю вот такие ключи {args.key}")
+    print(f"размер окна  визуализации: {args.screen_size}")
+    print(f'run in advnced mode {args.is_manual}')
 
     key_to_use = args.key
 
@@ -70,7 +82,10 @@ if __name__ == "__main__":
             # print("time creating pcd:", time.clock() - start_time)
         frames = np.array(frames)
 
-        animateFramesNative(frames, directory_output= args.output, threshold = args.threshold)
+        if not(args.is_manual):
+            animateFramesNative(frames, directory_output= args.output, threshold = args.threshold, load_viewpoint = args.is_viewpoint)
+        else:
+            custom_draw_geometry_with_key_callback(frames, threshold = args.threshold, is_loop = args.loop_mode)
 
         if args.output:
             if args.type == "gif":

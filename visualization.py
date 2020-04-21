@@ -161,10 +161,10 @@ def sample_visualization(points_coord):
     :param points_coord: ndarray [N,3/4]
     '''
     pcd = create_pointcloud(points_coord)
-    o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([pcd], width = 1280, height = 720)
     return 'success'
 
-def custom_draw_geometry_with_key_callback(frames):
+def custom_draw_geometry_with_key_callback(frames, threshold = 0.5 , is_loop = False):
     """
         Function to visualize list of frames and control proccess through keyboard.
         :param frames:
@@ -175,11 +175,11 @@ def custom_draw_geometry_with_key_callback(frames):
     frame = frames[counter]
 
     start_time = time.time()
-    points_cord, colors_arr = pointcloud_coords_generation(frame)
+    points_cord, colors_arr = pointcloud_coords_generation(frame, threshold= threshold)
     print("pcd:", time.time() - start_time)
     pcd = create_pointcloud(points_cord)
 
-    pcd.translate(np.array([0, 0, 2]))
+    # pcd.translate(np.array([0, 0, 2]))
 
     line_set = line_creation(60)
     conc_obj = [conc_creation(R) for R in range(1, 61, 10)]
@@ -200,12 +200,12 @@ def custom_draw_geometry_with_key_callback(frames):
         ctr = vis.get_view_control()
         fov = ctr.get_field_of_view()
 
-        num_frame = np.random.randint(0, 40)
-        new_pcd_attr, new_colors_arr = pointcloud_coords_generation(load_from_matfile(matr, num_frame))
+        num_frame = np.random.randint(0, len(frames))
+        new_pcd_attr, new_colors_arr = pointcloud_coords_generation(frames[num_frame], threshold= threshold)
         new_pcd_cords = new_pcd_attr[0][:, :3]
         pcd.points = o3d.utility.Vector3dVector(new_pcd_cords)
         #         pcd.colors = o3d.utility.Vector3dVector(new_pcd_colors)
-        vis.update_geometry()
+        vis.update_geometry(pcd)
 
         return False
 
@@ -216,7 +216,7 @@ def custom_draw_geometry_with_key_callback(frames):
         fov = ctr.get_field_of_view()
 
         #         vis.capture_screen_image("images2gif_car/new_"+ str(counter) + '.png')
-        vis.capture_screen_image(direct + "/" + filename_ext + "_" + str(counter) + '.png')
+        # vis.capture_screen_image(direct + "/" + filename_ext + "_" + str(counter) + '.png')
 
         counter += 1
         num_frame = counter
@@ -230,28 +230,12 @@ def custom_draw_geometry_with_key_callback(frames):
 
         frame = new_frame
         start_time = time.time()
-        new_pcd_cords, new_pcd_colors = pointcloud_coords_generation(frame)
+        new_pcd_cords, new_pcd_colors = pointcloud_coords_generation(frame, threshold= threshold)
         print("pcd:", time.time() - start_time)
 
         pcd.points = o3d.utility.Vector3dVector(new_pcd_cords[..., :3])
         #         pcd.colors = o3d.utility.Vector3dVector(new_colors)
-
-        pcd.translate(np.array([0, 0, 2]))
-
-        twod_spectr = np.sum(frame, axis=-1)
-        twod_spectr = 255 * (twod_spectr - np.min(twod_spectr)) / (np.max(twod_spectr) - np.min(twod_spectr))
-
-        start_time = time.time()
-        points, colors = spectr_generation(twod_spectr, value_of_increase=2)
-        print("back:", time.time() - start_time)
-
-        spectr_pcd.points = o3d.utility.Vector3dVector(points[..., :3])
-        spectr_pcd.colors = o3d.utility.Vector3dVector(colors)
-
-        vis.update_geometry()
-
-        print(counter, num_frame)
-
+        vis.update_geometry(pcd)
         return False
 
     key_to_callback = {}
@@ -259,16 +243,16 @@ def custom_draw_geometry_with_key_callback(frames):
     key_to_callback[ord("X")] = next_frame
     key_to_callback[ord("A")] = load_render_option
     key_to_callback[ord("B")] = save_render_option
-    o3d.visualization.draw_geometries_with_key_callbacks([line_set, pcd, *conc_obj], key_to_callback)
+    o3d.visualization.draw_geometries_with_key_callbacks([line_set, pcd, *conc_obj], key_to_callback, width = 1280, height = 720)
 
-def animateFrames(frames, directory_output = None):
+def animateFrames(frames, directory_output = None, threshold= 0.5):
     '''
     visualize frames each by each
     '''
     global counter
     counter = 0
     frame = frames[counter]
-    coords,_ = pointcloud_coords_generation(frame)
+    coords,_ = pointcloud_coords_generation(frame, threshold = threshold)
     pcd = create_pointcloud(coords)
 
     if not(directory_output is None) and not(os.path.exists(directory_output)):
@@ -294,16 +278,16 @@ def animateFrames(frames, directory_output = None):
             counter = 0
             frame = frames[counter]
 
-        coords, _ = pointcloud_coords_generation(frame)
+        coords, _ = pointcloud_coords_generation(frame, threshold = threshold)
 
         pcd.points = o3d.utility.Vector3dVector(coords[:,:3])
         vis.update_geometry()
         return False
 
     # native function and realization
-    o3d.visualization.draw_geometries_with_animation_callback([pcd], change_frame)
+    o3d.visualization.draw_geometries_with_animation_callback([pcd], change_frame, width = 1280, height = 720)
 
-def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_mode = True):
+def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_mode = True, load_viewpoint = False):
     '''
     Function that visualize frames each-by-each. load viewpoint from file viewpoint.json is exist in root.
     Stops when window is closed. Written through more flexible API.
@@ -312,39 +296,45 @@ def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_m
     '''
 
     vis = o3d.visualization.Visualizer()
-    vis.create_window("visualization animation",width=1920, height=1080)
+    vis.create_window("visualization animation",width = 1280, height = 720)
+    # vis.run()
     ctr = vis.get_view_control()
 
-    param = ctr.convert_to_pinhole_camera_parameters()
+
     # print(param, type(param))
     # param.extrinsic = np.array([-0.2126613131238308, -0.16695967931989117, 0.96275626790057689, 0.0,
     #                     -0.97624525742396262, -0.0055196889525807868, -0.21659808492017577, 0.0,
     #                       0.041477261935533805, -0.98594827375236382, -0.16181977081637847, 0.0,
     #                       7.0309519553707744, 7.4669576083447309, 16.755978191826497, 1.0 ]).reshape((4,4))
 
-    param.extrinsic = np.array([
-		-0.32343897999919241,
-		-0.11067496256629293,
-		0.93975437156633213,
-		0.0,
-		-0.9460348841228976,
-		0.058949083452657251,
-		-0.31865812963529988,
-		0.0,
-		-0.020130182305631454,
-		-0.99210687842643319,
-		-0.12376880681052368,
-		0.0,
-		9.7921434637386273,
-		7.7052951383922972,
-		21.336815565808898,
-		1.0
-	]).reshape((4,4))
-    ctr.convert_from_pinhole_camera_parameters(param)
 
-    # if os.path.exists("viewpoint.json"):
-    #     param = o3d.io.read_pinhole_camera_parameters('viewpoint.json')
-    #     ctr.convert_from_pinhole_camera_parameters(param)
+    # param.extrinsic = np.array([
+		# -0.32343897999919241,
+		# -0.11067496256629293,
+		# 0.93975437156633213,
+		# 0.0,
+		# -0.9460348841228976,
+		# 0.058949083452657251,
+		# -0.31865812963529988,
+		# 0.0,
+		# -0.020130182305631454,
+		# -0.99210687842643319,
+		# -0.12376880681052368,
+		# 0.0,
+		# 9.7921434637386273,
+		# 7.7052951383922972,
+		# 21.336815565808898,
+		# 1.0
+    # ]).reshape((4,4))
+    # ctr.convert_from_pinhole_camera_parameters(param)
+
+    print("load viewpoint?",os.path.exists("viewpoint.json"), (os.path.exists("viewpoint.json") and load_viewpoint) )
+    if os.path.exists("viewpoint.json") and load_viewpoint:
+        ctr = vis.get_view_control()
+        param = o3d.io.read_pinhole_camera_parameters('viewpoint.json')
+        print(param.extrinsic)
+        print("success or not?",ctr.convert_from_pinhole_camera_parameters(param))
+        # vis.update_renderer()
 
     if not(directory_output is None) and not(os.path.exists(directory_output)):
         print(f"create dir {directory_output}")
@@ -364,6 +354,12 @@ def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_m
 
     vis.add_geometry(pcd)
 
+    if os.path.exists("viewpoint.json") and load_viewpoint:
+        param = ctr.convert_to_pinhole_camera_parameters()
+        ctr = vis.get_view_control()
+        param = o3d.io.read_pinhole_camera_parameters('viewpoint.json')
+        ctr.convert_from_pinhole_camera_parameters(param)
+
     while True:
 
         start_time = time.time()
@@ -373,11 +369,13 @@ def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_m
         counter += 1
 
         if counter >= len(frames):
+            if loop_mode:
+                break
             counter = 0
 
         pointcoords = cache_dict.get(counter)
 
-        if  not(isinstance(pointcoords, np.ndarray)):
+        if not(isinstance(pointcoords, np.ndarray)):
             frame = frames[counter]
             pointcoords, _ = pointcloud_coords_generation(frame, threshold=threshold)
             cache_dict[counter] = pointcoords
@@ -392,7 +390,7 @@ def animateFramesNative(frames, threshold = 0.5, directory_output = None, loop_m
         # pointcoords, _ = pointcloud_coords_generation(frame, threshold = threshold)
 
         pcd.points = o3d.utility.Vector3dVector(pointcoords[...,:3])
-        vis.update_geometry()
+        vis.update_geometry(pcd)
         vis.poll_events()
         vis.update_renderer()
         print("time after one vis loop: ", start_time - time.time())
